@@ -1,53 +1,45 @@
 #!/usr/bin/env python3
-"""Page replacement algorithms (FIFO, LRU, OPT, Clock) — zero-dep."""
-from collections import OrderedDict
-
+"""page_replace - Page replacement algorithms (FIFO, LRU, Optimal)."""
+import sys, collections
 def fifo(pages, frames):
-    memory=[]; faults=0
+    memory=collections.deque(maxlen=frames); faults=0; history=[]
     for p in pages:
-        if p not in memory:
-            faults+=1
-            if len(memory)>=frames: memory.pop(0)
-            memory.append(p)
-    return faults
-
+        hit=p in memory
+        if not hit: memory.append(p); faults+=1
+        history.append((p,"HIT" if hit else "FAULT",list(memory)))
+    return faults, history
 def lru(pages, frames):
-    memory=OrderedDict(); faults=0
+    memory=[]; faults=0; history=[]
     for p in pages:
-        if p in memory: memory.move_to_end(p)
+        hit=p in memory
+        if hit: memory.remove(p); memory.append(p)
         else:
-            faults+=1
-            if len(memory)>=frames: memory.popitem(last=False)
-            memory[p]=True
-    return faults
-
+            if len(memory)>=frames: memory.pop(0)
+            memory.append(p); faults+=1
+        history.append((p,"HIT" if hit else "FAULT",list(memory)))
+    return faults, history
 def optimal(pages, frames):
-    memory=[]; faults=0
+    memory=[]; faults=0; history=[]
     for i,p in enumerate(pages):
-        if p not in memory:
-            faults+=1
+        hit=p in memory
+        if not hit:
             if len(memory)>=frames:
-                future={m:len(pages) for m in memory}
-                for m in memory:
-                    for j in range(i+1,len(pages)):
-                        if pages[j]==m: future[m]=j; break
-                victim=max(memory,key=lambda m:future[m])
-                memory.remove(victim)
-            memory.append(p)
-    return faults
-
-def clock(pages, frames):
-    memory=[None]*frames; use=[False]*frames; ptr=0; faults=0
-    for p in pages:
-        if p in memory: use[memory.index(p)]=True; continue
-        faults+=1
-        while use[ptr]: use[ptr]=False; ptr=(ptr+1)%frames
-        memory[ptr]=p; use[ptr]=True; ptr=(ptr+1)%frames
-    return faults
-
+                furthest=-1; victim=0
+                for j,m in enumerate(memory):
+                    try: next_use=pages[i+1:].index(m)
+                    except ValueError: next_use=float('inf')
+                    if next_use>furthest: furthest=next_use; victim=j
+                memory[victim]=p
+            else: memory.append(p)
+            faults+=1
+        history.append((p,"HIT" if hit else "FAULT",list(memory)))
+    return faults, history
 if __name__=="__main__":
     pages=[7,0,1,2,0,3,0,4,2,3,0,3,2,1,2,0,1,7,0,1]
-    frames=3
+    frames=int(sys.argv[1]) if len(sys.argv)>1 else 3
     print(f"Pages: {pages}, Frames: {frames}")
-    for name,fn in [("FIFO",fifo),("LRU",lru),("Optimal",optimal),("Clock",clock)]:
-        print(f"  {name:>8}: {fn(pages,frames)} faults")
+    for name,fn in [("FIFO",fifo),("LRU",lru),("Optimal",optimal)]:
+        faults,history=fn(pages,frames)
+        print(f"\n{name}: {faults} faults ({faults/len(pages)*100:.0f}% miss rate)")
+        for p,status,mem in history[-5:]:
+            print(f"  Page {p}: {status:5s} {mem}")

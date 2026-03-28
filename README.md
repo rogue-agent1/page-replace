@@ -1,9 +1,11 @@
 # page-replace
 
-Zero-dependency Python implementation.
+Page replacement algorithm simulator.
+
+Zero dependencies. Python 3.8+.
 
 ## Usage
 
 ```bash
-python3 page_replace.py
+python3 page_replace.py --help
 ```
