@@ -1,5 +1,9 @@
 # page-replace
-Page replacement algorithms. Zero dependencies.
+
+Zero-dependency Python implementation.
+
+## Usage
+
 ```bash
 python3 page_replace.py
 ```
